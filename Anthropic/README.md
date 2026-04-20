@@ -73,16 +73,16 @@ Anthropic's managed-agents design, as evidenced by the source diagrams and PDF i
 ### Analytical State Equation
 
 $$
-S_t = (V_a, E, H_{\le t}, R_t, C_t, P_t)
+S_t = (V, E, H, R, C, P)
 $$
 
 The figures justify each state component:
-$V_a$ from versioned agent configuration,
+$V$ from versioned agent configuration,
 $E$ from separate environment reference,
-$H_{\le t}$ from streamed events plus server-side history,
+$H$ from streamed events plus server-side history,
 $R_t$ from files, repositories, memory, and MCP access,
-$C_t$ from tool, MCP, and custom-tool execution context,
-and $P_t$ from explicit approval policies.
+$C$ from tool, MCP, and custom-tool execution context,
+and $P$ from explicit approval policies.
 
 ## Agent As A Reusable, Versioned Configuration
 
@@ -101,7 +101,7 @@ and $P_t$ from explicit approval policies.
   reason, plan, act, use tools, and learn.
 - Sessions reference the agent by ID.
 - Version lifecycle is shown as:
-  $V1 \rightarrow V2 \rightarrow V3 \rightarrow \text{Archived}$.
+  `V1 -> V2 -> V3 -> Archived`.
 - Lifecycle operations include:
   list versions, update to create a new version, and archive as read-only.
 - The diagrams explicitly note:
@@ -125,7 +125,7 @@ A = (I, C, G, M, V)
 $$
 
 $$
-A_{v_{k+1}} = \operatorname{Update}(A_{v_k})
+A_{k+1} = U(A_k)
 $$
 
 ## Tooling Plane: Built-In Tools And Custom Tools
@@ -148,7 +148,7 @@ $$
 - The example custom tool is:
   `get_weather` with input schema `location: string`.
 - Custom tool call flow is explicitly:
-  model emits request $\rightarrow$ app executes tool $\rightarrow$ result returns $\rightarrow$ session continues.
+  model emits request -> app executes tool -> result returns -> session continues.
 - Design guidance shown for custom tools:
   detailed descriptions, consolidate operations, meaningful namespacing, high-signal responses.
 - MCP or external providers are presented as standardized third-party capabilities adjacent to tooling.
@@ -167,10 +167,10 @@ $$
 ### Capability Routing Equation
 
 $$
-\mathrm{Route}(q) \in \{\mathrm{BuiltInTool}, \mathrm{CustomTool}, \mathrm{MCPServer}\}
+r(q) = {B, T, M}
 $$
 
-The diagrams do not place skills in this exact routing panel, but later figures show skills as a parallel expertise surface that influences how tasks are interpreted and executed.
+Here $B$ denotes a built-in tool, $T$ a custom tool, and $M$ an MCP server. The diagrams do not place skills in this exact routing panel, but later figures show skills as a parallel expertise surface that influences how tasks are interpreted and executed.
 
 ## MCP Plane: Structured Access To External Capability Graphs
 
@@ -203,7 +203,7 @@ The diagrams do not place skills in this exact routing panel, but later figures 
 - MCP protocol is explicitly labeled:
   `JSON-RPC 2.0 over stdio / SSE`.
 - MCP tool call flow is explicitly:
-  model emits MCP request $\rightarrow$ request sent to MCP server via protocol $\rightarrow$ server executes capability $\rightarrow$ result returns to agent as structured JSON $\rightarrow$ session continues.
+  model emits MCP request -> request sent to MCP server via protocol -> server executes capability -> result returns to agent as structured JSON -> session continues.
 - External-provider categories shown:
   files and storage,
   code and dev tools,
@@ -233,7 +233,7 @@ The diagrams do not place skills in this exact routing panel, but later figures 
 ### Structured Execution Equation
 
 $$
-R_{\mathrm{mcp}} = \mathrm{Execute}(Q, S, L, P)
+R_m = F(Q, S, L, P)
 $$
 
 ## Skills Plane: Reusable Filesystem-Based Expertise
@@ -276,7 +276,7 @@ $$
 ### Skill Loading Constraint
 
 $$
-\lvert K_{\mathrm{session}} \rvert \le 20
+|K| <= 20
 $$
 
 The source makes this an operational hard limit, not a soft recommendation.
@@ -308,11 +308,11 @@ The source makes this an operational hard limit, not a soft recommendation.
   session waits for approval and requires `user.tool_confirmation`.
 - The approval transition sequence is explicitly:
   `agent.tool_use / agent.mcp_tool_use`
-  $\rightarrow$
+  ->
   `session.status_idle` with stop reason `requires_action`
-  $\rightarrow$
+  ->
   `user.tool_confirmation`
-  $\rightarrow$
+  ->
   session returns to running.
 - `user.tool_confirmation` results shown:
   allow, deny, deny message.
@@ -335,15 +335,10 @@ The source makes this an operational hard limit, not a soft recommendation.
 ### Permission Gate Equation
 
 $$
-\mathrm{Allow}(a)=
-\begin{cases}
-1 & \text{if } p(a)=\text{always\_allow} \\
-1 & \text{if } p(a)=\text{always\_ask} \text{ and } c(a)=\text{allow} \\
-0 & \text{otherwise}
-\end{cases}
+g(a) = 1 if p(a)=p1 or (p(a)=p2 and c(a)=c1)
 $$
 
-where $p(a)$ is the configured permission policy for action $a$ and $c(a)$ is the user confirmation outcome.
+Here $p1$ denotes the automatic-allow policy, $p2$ the ask-for-approval policy, and $c1$ an approval result.
 
 ## Environment Reuse And Session Isolation
 
@@ -390,8 +385,7 @@ where $p(a)$ is the configured permission policy for action $a$ and $c(a)$ is th
 ### Isolation Equation
 
 $$
-\mathrm{Shared}(\mathrm{EnvironmentConfig}) = 1,\qquad
-\mathrm{Shared}(\mathrm{FilesystemState}) = 0
+Xe = 1, Xf = 0
 $$
 
 This equation is a direct abstraction of the environment diagram's two strongest claims:
@@ -468,11 +462,11 @@ environment reuse across sessions and per-session filesystem isolation.
   open stream before sending events.
 - Live-control loop shown:
   send `user.message`
-  $\rightarrow$
+  ->
   stream responses
-  $\rightarrow$
+  ->
   `user.interrupt`
-  $\rightarrow$
+  ->
   redirect with new `user.message`.
 - Outcome mode fields shown:
   `user.define_outcome`,
@@ -505,22 +499,10 @@ environment reuse across sessions and per-session filesystem isolation.
 ### Session Transition Relation
 
 $$
-\text{user.message}
-\rightarrow
-\text{agent.message}
-\rightarrow
-\left(
-\text{tool\_use}
-\;\text{or}\;
-\text{mcp\_tool\_use}
-\;\text{or}\;
-\text{custom\_tool\_use}
-\right)
-\rightarrow
-\text{result}
-\rightarrow
-\text{session.status}
+u -> a -> (t or m or c) -> r -> s
 $$
+
+Here $u$ denotes a user message, $a$ an agent response, $t$ a built-in tool call, $m$ an MCP call, $c$ a custom-tool call, $r$ a returned result, and $s$ a session-status update.
 
 ## Container Reference: Runtime Envelope And Operational Limits
 
