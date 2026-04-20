@@ -1,7 +1,7 @@
 # Anthropic Managed Agents Architecture
 
 ## Architectural Claim
-Anthropic's managed-agents design, as evidenced by the source diagrams and PDF in this folder, is a control-plane architecture in which a reusable, versioned $agent$ specification and a separately managed $environment$ are bound at session start; execution then proceeds as an event-driven runtime with explicit routing across built-in tools, custom tools, MCP servers, skills, permission gates, and cloud-container resources.
+Anthropic's managed-agents design is a control-plane architecture in which a reusable, versioned $agent$ specification and a separately managed $environment$ are bound at session start; execution then proceeds as an event-driven runtime with explicit routing across built-in tools, custom tools, MCP servers, skills, permission gates, and cloud-container resources.
 
 - Core configuration split:
   the source separates `AGENT` from `ENVIRONMENT`, then binds both into a live `SESSION`.
@@ -10,38 +10,11 @@ Anthropic's managed-agents design, as evidenced by the source diagrams and PDF i
 - Governance model:
   versioned agents, scoped MCP exposure, tool permission policies, and application-owned custom-tool execution define the main control boundaries.
 
-## Source Boundary And Attribution Protocol
-
-### Reported Sources
-- PDF:
-  [`anthropic.pdf`](./anthropic.pdf)
-- Image set:
-  [`main_flow.png`](./main_flow.png),
-  [`main_flow-symbol.png`](./main_flow-symbol.png),
-  [`Agentic_pipline.png`](./Agentic_pipline.png),
-  [`Agentic_pipline_version1.png`](./Agentic_pipline_version1.png),
-  [`Tool_agentic_use.png`](./Tool_agentic_use.png),
-  [`MCP_server.png`](./MCP_server.png),
-  [`Agentic_skills.png`](./Agentic_skills.png),
-  [`skills_agentic.png`](./skills_agentic.png),
-  [`permission_pociles.png`](./permission_pociles.png),
-  [`environmental.png`](./environmental.png),
-  [`session.png`](./session.png),
-  [`container.png`](./container.png)
-
-### Attribution Tags Used Below
-- `Reported fact`:
-  text, labels, limits, identifiers, and flows directly visible in the source diagrams.
-- `Inferred mechanism`:
-  causal interpretation that follows from the diagram structure but is not stated verbatim.
-- `System-level conclusion`:
-  original engineering judgment derived by connecting multiple figures.
-
 ## Causal System Overview
 
 ![Managed agent execution flow](./main_flow-symbol.png)
 
-### Reported Facts
+### Architecture
 - Managed infrastructure contains two first-class configuration blocks:
   `AGENT` and `ENVIRONMENT`.
 - The `AGENT` block explicitly includes:
@@ -58,7 +31,7 @@ Anthropic's managed-agents design, as evidenced by the source diagrams and PDF i
 - The application can:
   create, start, and send events to a session, steer or interrupt it, and receive streamed outputs.
 
-### Inferred Mechanism
+### Mechanics
 - The architecture splits static definition from live execution.
   The agent and environment are configuration assets; the session is the execution-time composition of those assets.
 - The application does not directly invoke low-level tools.
@@ -66,7 +39,7 @@ Anthropic's managed-agents design, as evidenced by the source diagrams and PDF i
 - Persistent state is not limited to conversation text.
   The diagrams explicitly indicate persistent filesystem state plus server-side event history.
 
-### System-Level Conclusion
+### Implications
 - The design is not a "prompt wrapper" abstraction.
   It is a long-running agent runtime with explicit orchestration surfaces, persistent state, and multi-capability execution.
 
@@ -88,7 +61,7 @@ and $P$ from explicit approval policies.
 
 ![Agent versioned configuration](./Agentic_pipline.png)
 
-### Reported Facts
+### Architecture
 - The central claim in the source is:
   "Define your agent as a reusable, versioned configuration."
 - Identity fields include:
@@ -107,14 +80,14 @@ and $P$ from explicit approval policies.
 - The diagrams explicitly note:
   `managed-agents-2026-04-01 beta header required`.
 
-### Inferred Mechanism
+### Mechanics
 - The version boundary sits at the agent-definition layer rather than the session layer.
   This means sessions can pin or inherit a version while remaining operationally separate.
 - Guardrails are part of the reusable configuration surface, not ad hoc runtime toggles.
 - Versioning enables a stable reference model:
   developers define once, sessions instantiate later.
 
-### System-Level Conclusion
+### Implications
 - The agent object is a deployment artifact.
   It behaves closer to a versioned service specification than to a raw prompt template.
 
@@ -132,7 +105,7 @@ $$
 
 ![Tool configuration and custom tool routing](./Tool_agentic_use.png)
 
-### Reported Facts
+### Architecture
 - Toolset configuration type is shown as:
   `agent_toolset_20260401`.
 - Built-in tools listed in the source are:
@@ -153,14 +126,14 @@ $$
   detailed descriptions, consolidate operations, meaningful namespacing, high-signal responses.
 - MCP or external providers are presented as standardized third-party capabilities adjacent to tooling.
 
-### Inferred Mechanism
+### Mechanics
 - Built-in tools are runtime-native.
   Custom tools are app-mediated, meaning the application remains the executor for these calls.
 - Tool discoverability is schema-driven.
   The model sees structured affordances, not only natural-language descriptions.
 - High-signal tool responses are treated as an architectural requirement, implying that output quality affects downstream reasoning quality.
 
-### System-Level Conclusion
+### Implications
 - The tool model separates trusted local primitives from application-defined capability adapters.
   This is a deliberate control split: Anthropic owns the built-in runtime surface, while the app owns external execution semantics for custom tools.
 
@@ -176,7 +149,7 @@ Here $B$ denotes a built-in tool, $T$ a custom tool, and $M$ an MCP server. The 
 
 ![MCP server configuration and interaction model](./MCP_server.png)
 
-### Reported Facts
+### Architecture
 - MCP configuration type is shown as:
   `mcp_toolset_20260401`.
 - The agent can define and attach MCP servers.
@@ -218,7 +191,7 @@ Here $B$ denotes a built-in tool, $T$ a custom tool, and $M$ an MCP server. The 
   monitor usage and errors,
   version and update configurations.
 
-### Inferred Mechanism
+### Mechanics
 - MCP is the extensibility layer for standardized remote capability access.
   It differs from custom tools by using a protocol-governed, server-mediated execution model.
 - Scope control is first-class because MCP surfaces can expose more than callable tools.
@@ -226,7 +199,7 @@ Here $B$ denotes a built-in tool, $T$ a custom tool, and $M$ an MCP server. The 
 - Transport choice matters operationally.
   `stdio` implies local or sidecar connectivity; `sse` implies stream-based remote connectivity.
 
-### System-Level Conclusion
+### Implications
 - Anthropic is treating MCP as a typed capability bus rather than a plugin label.
   The crucial design property is not server registration alone, but constrained exposure of tools, resources, and prompts under explicit protocol and scope boundaries.
 
@@ -240,7 +213,7 @@ $$
 
 ![Skills architecture](./skills_agentic.png)
 
-### Reported Facts
+### Architecture
 - The source describes skills as reusable, filesystem-based expertise attached to an agent.
 - Skills can be attached at agent creation through a `skills` array.
 - Example fields shown:
@@ -262,14 +235,14 @@ $$
 - A session limit is explicitly stated:
   maximum $20$ skills per session, including skills across all agents in multi-agent sessions.
 
-### Inferred Mechanism
+### Mechanics
 - Skills are not simple prompt snippets.
   They are packaged expertise bundles that can load resources and execution guidance only when needed.
 - The on-demand load behavior is a context-window optimization strategy.
   Skills affect available expertise without forcing eager prompt inflation.
 - Automatic invocation indicates relevance-driven activation rather than mandatory fixed inclusion during every turn.
 
-### System-Level Conclusion
+### Implications
 - Skills function as a retrieval-and-procedure layer that sits between static system prompting and dynamic tool execution.
   They are a mechanism for injecting structured expertise while preserving context efficiency.
 
@@ -285,7 +258,7 @@ The source makes this an operational hard limit, not a soft recommendation.
 
 ![Permission policy state transitions](./permission_pociles.png)
 
-### Reported Facts
+### Architecture
 - The permission-policy figure explicitly controls when agent and MCP tools execute.
 - Agent toolset example:
   `type: agent_toolset_20260401`,
@@ -322,13 +295,13 @@ The source makes this an operational hard limit, not a soft recommendation.
   application decides execution,
   `user.custom_tool_result`.
 
-### Inferred Mechanism
+### Mechanics
 - Approval is implemented as a runtime state transition, not as a pre-execution static check.
 - MCP access is stricter by default than agent built-in tools.
   The figure shows `always_ask` as the MCP default.
 - Custom tools remain under application governance, which moves trust responsibility out of Anthropic's permission-policy layer.
 
-### System-Level Conclusion
+### Implications
 - Permission safety is asymmetric by design.
   Built-in tools and MCP calls have first-class policy objects, while custom tools rely on application-side control. This is a genuine integration risk boundary, not a documentation footnote.
 
@@ -344,7 +317,7 @@ Here $p1$ denotes the automatic-allow policy, $p2$ the ask-for-approval policy, 
 
 ![Environment reuse across multiple sessions](./environmental.png)
 
-### Reported Facts
+### Architecture
 - The source calls the environment a pre-built, configurable agent harness in managed infrastructure.
 - It is positioned as best for:
   long-running tasks and asynchronous work.
@@ -372,13 +345,13 @@ Here $p1$ denotes the automatic-allow policy, $p2$ the ask-for-approval policy, 
   managed cloud runtime,
   session-based isolation.
 
-### Inferred Mechanism
+### Mechanics
 - The environment is durable infrastructure state, but per-session runtime state remains isolated.
 - Reusing environment configuration improves setup amortization without collapsing session boundaries.
 - Non-versioned environments create a different change-management model from versioned agents.
   This is a deliberate split: agent behavior history is tracked; environment lifecycle is durable but not versioned in the same way.
 
-### System-Level Conclusion
+### Implications
 - Anthropic separates behavioral reproducibility from runtime provisioning reuse.
   The agent is versioned for governance; the environment is reused for operational efficiency; the session is isolated for execution safety.
 
@@ -395,7 +368,7 @@ environment reuse across sessions and per-session filesystem isolation.
 
 ![Live session internals and execution context](./session.png)
 
-### Reported Facts
+### Architecture
 - A session is defined as a running agent instance within an environment.
 - The session references:
   agent and environment.
@@ -486,13 +459,13 @@ environment reuse across sessions and per-session filesystem isolation.
   `managed-agents-2026-04-01 beta header required`,
   outcomes and memory are research preview features.
 
-### Inferred Mechanism
+### Mechanics
 - The session is a fully observable orchestration loop rather than a black-box chat turn processor.
 - Event taxonomy is designed for external supervision and replayability.
 - Outcome mode adds a self-evaluation loop with bounded iteration count and criterion-specific feedback.
 - Memory stores and repositories extend state beyond ephemeral conversation while preserving explicit attachment semantics.
 
-### System-Level Conclusion
+### Implications
 - The session abstraction is the real operating system boundary of the platform.
   It binds agent definition, environment, resources, vault-authenticated access, event telemetry, and iterative outcome evaluation into one managed control loop.
 
@@ -508,7 +481,7 @@ Here $u$ denotes a user message, $a$ an agent response, $t$ a built-in tool call
 
 ![Cloud container reference](./container.png)
 
-### Reported Facts
+### Architecture
 - The container is described as a pre-installed runtime environment available immediately with no installation steps.
 - Programming languages and package managers shown:
 
@@ -552,13 +525,13 @@ Here $u$ denotes a user message, $a$ an agent response, $t$ a built-in tool call
 - The figure again notes:
   `managed-agents-2026-04-01 beta header required`.
 
-### Inferred Mechanism
+### Mechanics
 - The runtime is optimized for immediate execution rather than custom image build pipelines.
 - Local embedded storage is intentionally narrow.
   SQLite is first-class local state; networked databases require external services plus enabled network policy.
 - The presence of multiple language runtimes suggests environment reuse is meant to cover heterogeneous tool chains without custom bootstrapping.
 
-### System-Level Conclusion
+### Implications
 - The container envelope is generous enough for general automation and light build/test workflows, but it is not presented as an unrestricted long-lived VM.
   Network is opt-in, local database service is minimal, and disk/memory ceilings are explicit.
 
