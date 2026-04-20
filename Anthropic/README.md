@@ -39,9 +39,7 @@ Anthropic's managed-agents design, as evidenced by the source diagrams and PDF i
 
 ## Causal System Overview
 
-![Managed agent execution flow](./main_flow.png)
-
-![Managed agent execution flow, symbolic variant](./main_flow-symbol.png)
+![Managed agent execution flow](./main_flow-symbol.png)
 
 ### Reported Facts
 - Managed infrastructure contains two first-class configuration blocks:
@@ -73,33 +71,22 @@ Anthropic's managed-agents design, as evidenced by the source diagrams and PDF i
   It is a long-running agent runtime with explicit orchestration surfaces, persistent state, and multi-capability execution.
 
 ### Analytical State Equation
-`Author analysis`
 
 $$
-\text{SessionState}_t =
-\left(
-\text{AgentVersion},
-\text{EnvironmentID},
-\text{EventHistory}_{\le t},
-\text{MountedResources}_t,
-\text{ToolContext}_t,
-\text{PermissionState}_t
-\right)
+S_t = (V_a, E, H_{\le t}, R_t, C_t, P_t)
 $$
 
 The figures justify each state component:
-$\text{AgentVersion}$ from versioned agent configuration,
-$\text{EnvironmentID}$ from separate environment reference,
-$\text{EventHistory}_{\le t}$ from streamed events plus server-side history,
-$\text{MountedResources}_t$ from files, repositories, memory, and MCP access,
-$\text{ToolContext}_t$ from tool/MCP/custom-tool execution,
-and $\text{PermissionState}_t$ from explicit approval policies.
+$V_a$ from versioned agent configuration,
+$E$ from separate environment reference,
+$H_{\le t}$ from streamed events plus server-side history,
+$R_t$ from files, repositories, memory, and MCP access,
+$C_t$ from tool, MCP, and custom-tool execution context,
+and $P_t$ from explicit approval policies.
 
 ## Agent As A Reusable, Versioned Configuration
 
-![Agent versioned configuration, extended variant](./Agentic_pipline.png)
-
-![Agent versioned configuration, compact variant](./Agentic_pipline_version1.png)
+![Agent versioned configuration](./Agentic_pipline.png)
 
 ### Reported Facts
 - The central claim in the source is:
@@ -132,21 +119,13 @@ and $\text{PermissionState}_t$ from explicit approval policies.
   It behaves closer to a versioned service specification than to a raw prompt template.
 
 ### Agent Lifecycle Equation
-`Author analysis`
 
 $$
-\text{Agent} =
-\left(
-\text{Identity},
-\text{Capabilities},
-\text{Guardrails},
-\text{Metadata},
-\text{Version}
-\right)
+A = (I, C, G, M, V)
 $$
 
 $$
-\text{NewVersion} = \text{Update}\left(\text{Agent}_{v_k}\right) \rightarrow \text{Agent}_{v_{k+1}}
+A_{v_{k+1}} = \operatorname{Update}(A_{v_k})
 $$
 
 ## Tooling Plane: Built-In Tools And Custom Tools
@@ -186,15 +165,9 @@ $$
   This is a deliberate control split: Anthropic owns the built-in runtime surface, while the app owns external execution semantics for custom tools.
 
 ### Capability Routing Equation
-`Author analysis`
 
 $$
-\text{CapabilityRoute}(q) \in
-\left\{
-\text{BuiltInTool},
-\text{CustomTool},
-\text{MCPServer}
-\right\}
+\mathrm{Route}(q) \in \{\mathrm{BuiltInTool}, \mathrm{CustomTool}, \mathrm{MCPServer}\}
 $$
 
 The diagrams do not place skills in this exact routing panel, but later figures show skills as a parallel expertise surface that influences how tasks are interpreted and executed.
@@ -258,24 +231,14 @@ The diagrams do not place skills in this exact routing panel, but later figures 
   The crucial design property is not server registration alone, but constrained exposure of tools, resources, and prompts under explicit protocol and scope boundaries.
 
 ### Structured Execution Equation
-`Author analysis`
 
 $$
-\text{MCPResult} =
-\text{ServerExecute}
-\left(
-\text{ProtocolRequest},
-\text{Scopes},
-\text{ServerLogic},
-\text{Permissions}
-\right)
+R_{\mathrm{mcp}} = \mathrm{Execute}(Q, S, L, P)
 $$
 
 ## Skills Plane: Reusable Filesystem-Based Expertise
 
-![Skills architecture, document-centric variant](./Agentic_skills.png)
-
-![Skills architecture, symbolic variant](./skills_agentic.png)
+![Skills architecture](./skills_agentic.png)
 
 ### Reported Facts
 - The source describes skills as reusable, filesystem-based expertise attached to an agent.
@@ -311,10 +274,9 @@ $$
   They are a mechanism for injecting structured expertise while preserving context efficiency.
 
 ### Skill Loading Constraint
-`Author analysis`
 
 $$
-\left|\text{SkillsInSession}\right| \le 20
+\lvert K_{\mathrm{session}} \rvert \le 20
 $$
 
 The source makes this an operational hard limit, not a soft recommendation.
@@ -371,14 +333,13 @@ The source makes this an operational hard limit, not a soft recommendation.
   Built-in tools and MCP calls have first-class policy objects, while custom tools rely on application-side control. This is a genuine integration risk boundary, not a documentation footnote.
 
 ### Permission Gate Equation
-`Author analysis`
 
 $$
-\text{Allow}(a)=
+\mathrm{Allow}(a)=
 \begin{cases}
-1, & p(a)=\texttt{always\_allow} \\
-1, & p(a)=\texttt{always\_ask} \land c(a)=\texttt{allow} \\
-0, & \text{otherwise}
+1 & \text{if } p(a)=\text{always\_allow} \\
+1 & \text{if } p(a)=\text{always\_ask} \text{ and } c(a)=\text{allow} \\
+0 & \text{otherwise}
 \end{cases}
 $$
 
@@ -427,11 +388,10 @@ where $p(a)$ is the configured permission policy for action $a$ and $c(a)$ is th
   The agent is versioned for governance; the environment is reused for operational efficiency; the session is isolated for execution safety.
 
 ### Isolation Equation
-`Author analysis`
 
 $$
-\text{Shared}(\text{EnvironmentConfig}) = 1,\qquad
-\text{Shared}(\text{FilesystemState}) = 0
+\mathrm{Shared}(\mathrm{EnvironmentConfig}) = 1,\qquad
+\mathrm{Shared}(\mathrm{FilesystemState}) = 0
 $$
 
 This equation is a direct abstraction of the environment diagram's two strongest claims:
@@ -543,24 +503,23 @@ environment reuse across sessions and per-session filesystem isolation.
   It binds agent definition, environment, resources, vault-authenticated access, event telemetry, and iterative outcome evaluation into one managed control loop.
 
 ### Session Transition Relation
-`Author analysis`
 
 $$
-\texttt{user.message}
+\text{user.message}
 \rightarrow
-\texttt{agent.message}
+\text{agent.message}
 \rightarrow
 \left(
-\texttt{tool\_use}
+\text{tool\_use}
 \;\text{or}\;
-\texttt{mcp\_tool\_use}
+\text{mcp\_tool\_use}
 \;\text{or}\;
-\texttt{custom\_tool\_use}
+\text{custom\_tool\_use}
 \right)
 \rightarrow
-\texttt{result}
+\text{result}
 \rightarrow
-\texttt{session.status\_*}
+\text{session.status}
 $$
 
 ## Container Reference: Runtime Envelope And Operational Limits
